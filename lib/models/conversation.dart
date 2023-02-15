@@ -9,9 +9,8 @@ import 'package:telephony/telephony.dart';
 ///
 ///
 ///
-@immutable
-class Conversation extends Comparable<Conversation> {
-  Conversation(this.conversation, this.smsInfo, this.contact, this.isSpam);
+class Conversation implements Comparable<Conversation> {
+  const Conversation(this.conversation, this.smsInfo, this.contact, this.isSpam);
 
   final SmsConversation conversation;
   final SmsMessage smsInfo;
@@ -41,7 +40,7 @@ class Conversation extends Comparable<Conversation> {
       );
     }
     else if (isSpam) {
-      over = const Icon(Icons.warning, color: Colors.black,);
+      over = Icon(Icons.warning, color: Colors.pink.shade100,);
       bColor = Colors.redAccent;
     }
     

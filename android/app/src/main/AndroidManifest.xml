@@ -49,6 +49,13 @@
             </intent-filter>
         </receiver>
 
+        <queries>
+          <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
+          </intent>
+        </queries>
+
         <!-- <activity
             android:name=".ComposeSmsActivity"
             android:exported="true">

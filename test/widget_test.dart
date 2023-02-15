@@ -1,30 +1,26 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:spam_chat/main.dart';
+import 'package:spam_chat/utils/spam_filter.dart';
+
+//=================================================//
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const App());
+  test('SpamClassifier prediction tests', () {
+    const msg1 = "Free entry in 2 a wkly comp to win FA Cup final tkts 21st May 2005. Text FA to 87121 to receive entry question(std txt rate)T&C's apply 08452810075over18's";
+    const msg2 = 'Go until jurong point, crazy.. Available only in bugis n great world la e buffet... Cine there got amore wat...';
+    const spam = SpamFilter();
+    expect(spam.isSpam(msg1), true);
+    expect(spam.isSpam(msg2), false);
+  });
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+  test('SpamClassifier parsing tests', () {
+    const msg1 = "Free entry in 2 a wkly comp to win FA Cup final tkts 21st May 2005. Text FA to 87121 to receive entry question(std txt rate)T&C's apply 08452810075over18's";
+    const p_msg1 = ['free', 'entri', 'in', '{{num}}', 'a', 'wkli', 'comp', 'to', 'win', 'fa', 'cup', 'final', 'tkt', '{{num}}', 'may', '{{num}}', '{{other}}', 'text', 'fa', 'to', '{{num}}', 'to', 'receiv', 'entri', 'question', '{{other}}', 'std', 'txt', 'rate', '{{other}}', 't', 'and', 'c', 's', 'appli', '{{other}}', 's'];
+    const msg2 = 'Go until jurong point, crazy.. Available only in bugis n great world la e buffet... Cine there got amore wat...';
+    const p_msg2 = ['go', 'until', 'jurong', 'point', '{{other}}', 'crazi', '{{other}}', 'avail', 'onli', 'in', 'bugi', 'n', 'great', 'world', 'la', 'e', 'buffet', '{{other}}', 'cine', 'there', 'got', 'amor', 'wat', '{{other}}'];
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
-
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // TODO:
+    expect(SpamFilter.preprocess(msg1), p_msg1);
+    expect(SpamFilter.preprocess(msg2), p_msg2);
   });
 }

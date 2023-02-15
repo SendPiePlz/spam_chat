@@ -43,5 +43,5 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
-# Other Folders
-ios/
+# Other
+.ipynb_checkpoints/

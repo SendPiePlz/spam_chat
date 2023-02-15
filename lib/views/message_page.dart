@@ -13,6 +13,7 @@ import 'package:telephony/telephony.dart';
 ///
 class MessagePage extends ConsumerStatefulWidget {
   const MessagePage({super.key, required this.conversation});
+  //const MessagePage.fromContact({super.key, required this.contact});
 
   final Conversation conversation;
 
@@ -22,8 +23,6 @@ class MessagePage extends ConsumerStatefulWidget {
 
 //=================================================//
 
-///
-///
 ///
 class _MessagePageState extends ConsumerState<MessagePage> {
   late TextEditingController _controller;
@@ -49,10 +48,9 @@ class _MessagePageState extends ConsumerState<MessagePage> {
     _telephone.sendMessage(
       widget.conversation.address,
       _controller.text,
-      callback: (_) => setState(() {}), // ??
+      (_) => setState(() {}), // ??
     );
     _controller.clear();
-    //setState(() {}); // ??
   }
 
 

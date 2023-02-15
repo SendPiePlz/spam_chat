@@ -1,13 +1,36 @@
-import 'package:flutter/cupertino.dart';
 import 'package:intl/intl.dart';
 import 'package:spam_chat/models/conversation.dart';
 import 'package:telephony/telephony.dart';
 
 //=================================================//
 
-extension FormatMessageDateTime on DateTime {
-  ///
-  ///
+extension Classification on String {
+  /// Checks if a string is composed of only letters and numbers [a-z0-9].
+  // (Assumes the string to be lower case.)
+  bool isalnum() {
+    for (final r in runes) {
+      if (r < 48 || (r > 57 && r < 97) || r > 122) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /// Checks if a string is composed of only letters [a-z].
+  // (Assumes the string to be lower case.)
+  bool isalpha() {
+    for (final r in runes) {
+      if (r < 97 || r > 122) {
+        return false;
+      }
+    }
+    return true;
+  }
+}
+
+//=================================================//
+
+extension FormatDateTime on DateTime {
   ///
   String formatConversationDateTime() {
     final now = DateTime.now();
@@ -27,8 +50,6 @@ extension FormatMessageDateTime on DateTime {
     }
   }
 
-  ///
-  ///
   ///
   String formatMessageDateTime() {
     final now = DateTime.now();
@@ -53,8 +74,6 @@ extension FormatMessageDateTime on DateTime {
 
 extension SortedInsertConversations on List<Conversation> {
   ///
-  ///
-  ///
   void sortedInsert(Conversation value) {
     var left = 0;
     var right = length-1;
@@ -76,8 +95,6 @@ extension SortedInsertConversations on List<Conversation> {
 
 extension SortedInsertMessages on List<SmsMessage> {
   ///
-  ///
-  ///
   void sortedInsert(SmsMessage value) {
     final date = value.date ?? 0;
     var left = 0;
@@ -95,7 +112,6 @@ extension SortedInsertMessages on List<SmsMessage> {
         right = mid + 1;
       }
     }
-    //debugPrint('$left');
     insert(left, value);
   }
 }
