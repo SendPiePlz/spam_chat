@@ -20,8 +20,8 @@ class SettingsPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final urlFilter = ref.watch(urlFilterProvider);
-    final telephone = ref.watch(telephonyProvider);
+    final urlFilter = ref.read(urlFilterProvider);
+    final telephone = ref.read(telephonyProvider);
 
     return Scaffold(
       appBar: AppBar(

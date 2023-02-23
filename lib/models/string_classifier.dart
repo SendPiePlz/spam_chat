@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:spam_chat/models/dictionary.dart';
+import 'package:spam_chat/models/transformer.dart';
 
 //=================================================//
 
@@ -12,15 +13,15 @@ import 'package:spam_chat/models/dictionary.dart';
 /// The `preprocessor` field is a conveniant way to tie-in the string
 /// processing steps with the actual prediction step.
 ///
-class MultinomialNB {
-  const MultinomialNB(this.vocabulary, this.preprocessor);
+class StringClassifier {
+  const StringClassifier(this.vocabulary, this.transformer);
 
   final Dictionary vocabulary;
-  final List<String> Function(String) preprocessor;
+  final Transformer<String, String> transformer;
 
   /// 
   bool predict(String str) {
-    final vec = preprocessor(str);
+    final vec = transformer.transform(str);
     var probs = Float64x2.zero();
     for (int i = 0; i < vec.length; ++i) {
       final p = vocabulary[vec[i]];

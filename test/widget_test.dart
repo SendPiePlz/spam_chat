@@ -8,7 +8,7 @@ void main() {
   test('SpamClassifier prediction tests', () {
     const msg1 = "Free entry in 2 a wkly comp to win FA Cup final tkts 21st May 2005. Text FA to 87121 to receive entry question(std txt rate)T&C's apply 08452810075over18's";
     const msg2 = 'Go until jurong point, crazy.. Available only in bugis n great world la e buffet... Cine there got amore wat...';
-    const spam = SpamFilter();
+    final spam = SpamFilter();
     expect(spam.isSpam(msg1), true);
     expect(spam.isSpam(msg2), false);
   });
@@ -20,7 +20,8 @@ void main() {
     const p_msg2 = ['go', 'until', 'jurong', 'point', '{{other}}', 'crazi', '{{other}}', 'avail', 'onli', 'in', 'bugi', 'n', 'great', 'world', 'la', 'e', 'buffet', '{{other}}', 'cine', 'there', 'got', 'amor', 'wat', '{{other}}'];
 
     // TODO:
-    expect(SpamFilter.preprocess(msg1), p_msg1);
-    expect(SpamFilter.preprocess(msg2), p_msg2);
+    final trans = SpamTransofmer();
+    expect(trans.transform(msg1), p_msg1);
+    expect(trans.transform(msg2), p_msg2);
   });
 }

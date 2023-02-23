@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spam_chat/utils/telephony_bloc.dart';
 import 'package:spam_chat/utils/url_filter.dart';
-import 'package:spam_chat/views/inbox_tab.dart';
+import 'package:spam_chat/views/inbox_page.dart';
 
 //=================================================//
 
@@ -42,7 +42,7 @@ class App extends StatelessWidget {
       child: MaterialApp(
         title: 'SpamChat',
         theme: ThemeData.dark(useMaterial3: true),
-        home: const InboxTab(),
+        home: const InboxPage(),
       ),
     );
   }

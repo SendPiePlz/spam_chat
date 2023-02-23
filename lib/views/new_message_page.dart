@@ -1,4 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:spam_chat/main.dart';
+import 'package:spam_chat/utils/extensions.dart';
+import 'package:spam_chat/utils/telephony_bloc.dart';
+import 'package:spam_chat/views/message_page.dart';
+import 'package:spam_chat/widgets/message_input_field.dart';
 import 'package:telephony/telephony.dart';
 
 //=================================================//
@@ -6,53 +14,276 @@ import 'package:telephony/telephony.dart';
 ///
 ///
 ///
-class NewMessagePage extends StatefulWidget {
+class NewMessagePage extends ConsumerStatefulWidget {
   const NewMessagePage({super.key});
 
+
   @override
-  State<NewMessagePage> createState() => _NewMessagePageState();
+  ConsumerState<NewMessagePage> createState() => _NewMessagePageState();
 }
 
 //=================================================//
 
 ///
-class _NewMessagePageState extends State<NewMessagePage> {
+class _NewMessagePageState extends ConsumerState<NewMessagePage> {
+  final isPhone = RegExp(r"\+?\d+|(\+\d)?(\d{3}) ?\d{3}-\d{4}|(\+\d)? \d{3}-\d{3}-\d{4}");
 
+  final TextEditingController _filterController = TextEditingController();
+  final TextEditingController _msgController = TextEditingController();
+  final FocusNode _focusNode = FocusNode();
+
+  late final TelephonyBloc _telephone;
+  late final Future<List<Contact>> _contacts;
+
+  bool _useDialpad = false;
+  bool _contactSelected = false;
   
+  Contact? _selectedContact;
+  bool _isSelectionCustom = false;
 
+  @override
+  void initState() {
+    super.initState();
+    _telephone = ref.read(telephonyProvider);
+    _contacts = _telephone.instance.getContacts();
+    _focusNode.addListener(_handleFocusChange);
+  }
+
+  @override
+  void dispose() {
+    _filterController.dispose();
+    _msgController.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  ///
+  void _handleFocusChange() {
+    if (_focusNode.hasFocus && _contactSelected) {
+      // focus changes back to recipient selection
+      setState(() {
+        _contactSelected = false;
+      });
+    }
+  }
+
+  ///
+  void _openMessageView(BuildContext ctx, SmsConversation convo, String addr, Contact? contact) {
+    // TODO
+    Navigator.pushReplacement(
+      ctx,
+      MaterialPageRoute(builder: (_) => MessagePage(
+        conversation: convo,
+        address: addr,
+        contact: contact,
+        isSpam: _telephone.isSpam(addr),
+      )),
+    );
+  }
+
+  ///
+  void _sendInitialMessage(BuildContext ctx) {
+    final addr = _cleanAddress(_selectedContact!.phone ?? '');
+    _telephone.sendMessage(
+      addr,
+      _msgController.text,
+      (status) {
+        if (status != SmsStatus.STATUS_FAILED) {
+          _telephone.instance.getConversationFromPhone(addr).then((c) {
+            if (c != null) {
+              _openMessageView(ctx, c, addr, (_isSelectionCustom) ? _selectedContact : null);
+            }
+            else {
+              // TODO: failed sending message
+              // setState(() {});
+            }
+          });
+        }
+      },
+    );
+  }
+
+  ///
+  void _onRecipientSelected(BuildContext ctx) {
+    final addr = _cleanAddress(_selectedContact?.phone ?? '');
+    _telephone.instance.getConversationFromPhone(addr).then((c) {
+      if (c != null) {
+        // A conversation already exists
+        _openMessageView(ctx, c, addr, (_isSelectionCustom) ? _selectedContact : null);
+      }
+      else {
+        // New conversation
+        setState(() {
+          _contactSelected = true;
+          _filterController.text = (_isSelectionCustom)
+            ? _selectedContact?.phone ?? ''
+            : _selectedContact?.displayName ?? '';
+          _focusNode.unfocus();
+        });
+      }
+    });
+  }
+
+  ///
+  String _cleanAddress(String text) {
+    final buf = StringBuffer();
+    for (final c in text.characters) {
+      if (c.isdigit()) {
+        buf.write(c);
+      }
+    }
+    if (buf.length == 11) {
+      return '+${buf.toString()}';
+    }
+    return buf.toString();
+  }
+
+  ///
+  String _tryFormatPhone(String text) {
+    if (text.length == 10) {
+      return '(${text.substring(0, 3)}) ${text.substring(3, 6)}-${text.substring(6)}';
+    }
+    else if (text.length == 11 && text[0] == '1') {
+      return '+1 (${text.substring(1, 4)}) ${text.substring(4, 7)}-${text.substring(7)}';
+    }
+    return text;
+  }
+
+  ///
+  Widget _buildContactSelectionView() {
+    return Column(
+      children: [
+        //Container(
+        //  child: (_contactSelected)
+        //    ? TextField(
+        //        controller: _msgController,
+        //        autofocus: true,
+        //        maxLines: null,
+        //        onSubmitted: (_) => _sendInitialMessage(context),
+        //        decoration: InputDecoration(
+        //          suffix: ValueListenableBuilder(
+        //            valueListenable: _msgController,
+        //            builder: (ctx, val, _) => IconButton(
+        //              icon: const Icon(Icons.send),
+        //              disabledColor: Colors.white38,
+        //              color: Theme.of(ctx).colorScheme.secondary,
+        //              onPressed: (val.text.isNotEmpty)
+        //                ? () => _sendInitialMessage(ctx)
+        //                : null,
+        //            ),
+        //          ),
+        //        ),
+        //      )
+        //    : const SizedBox(),
+        //),
+        (_contactSelected)
+          ? MessageInputField(
+              controller: _msgController,
+              autofocus: true,
+              maxHeight: 200,
+              onSubmitted: (_) => _sendInitialMessage(context),
+            )
+          : const SizedBox(),
+        Expanded(
+          child: ValueListenableBuilder(
+            valueListenable: _filterController,
+            builder: (ctx, val, _) => FutureBuilder(
+              future: _contacts,
+              initialData: const <Contact>[],
+              builder: (ctx, snapshot) {
+                // Filter contacts by names
+                final items = snapshot.requireData.where((c) {
+                  if (val.text.isEmpty) {
+                    return true;
+                  }
+                  return c.displayName?.toLowerCase().startsWith(val.text.toLowerCase()) ?? false;
+                }).toList();
+                var len = items.length;
+
+                // Add fake contact to the list for custom phone number
+                if (isPhone.hasMatch(val.text)) {
+                  items.add(Contact.fromMap({'displayName': 'Custom', 'phone': _tryFormatPhone(val.text)}, false));
+                  ++len;
+                }
+
+                // Render contact list
+                return ListView.builder(
+                  itemCount: len,
+                  itemBuilder: (ctx, i) => ListTile(
+                    leading: items[i].avatar,
+                    title: Text(items[i].displayName ?? ''),
+                    subtitle: Text(
+                      items[i].phone ?? '',
+                      style: const TextStyle(color: Colors.white60),
+                    ),
+                    onTap: () {
+                      _selectedContact = items[i];
+                      _isSelectionCustom = i == items.length;
+                      _onRecipientSelected(ctx);
+                    }
+                  ), 
+                );
+              },
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Send New Message'),
-      ),
-      body: StreamBuilder(
-        stream: Telephony.instance.getContacts().asStream(),
-        builder: (ctx, snapshot) {
-          final items = snapshot.data ?? [];
-          return ListView.builder(
-            itemCount: 1 + items.length,
-            itemBuilder: (ctx, i) => (i == 0)
-              ? ListTile( // Special item
-                  leading: const CircleAvatar(
-                    backgroundColor: Colors.transparent,
-                    foregroundColor: Colors.white70,
-                    child: Icon(Icons.dialpad),
+        title: const Text('New conversation'),
+        shadowColor: Colors.black87,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(60),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              TextFormField(
+                style: const TextStyle(fontWeight: FontWeight.normal),
+                decoration: InputDecoration(
+                  hintText: "Type a name or phone number",
+                  prefix: Container(
+                    padding: const EdgeInsets.only(left: 15, right: 25),
+                    child: Text(
+                      'To',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.secondary
+                      ),
+                    ),
                   ),
-                  title: const Text('Phone Number'),
-                  onTap: () {}, // TODO: open keypad
-                )
-              : ListTile( // Contact item
-                  leading: const CircleAvatar(
-                    child: Text('IN'),
+                  suffix: IconButton(
+                    padding: const EdgeInsets.only(right: 25, left: 10),
+                    icon: (_useDialpad)
+                      ? const Icon(Icons.dialpad)
+                      : const Icon(Icons.keyboard),
+                    onPressed: () => setState(() {
+                      // Toggle keyboard type
+                      _useDialpad = !_useDialpad;
+                      // Refresh focus to switch keyboard
+                      _focusNode.unfocus();
+                      Timer(const Duration(milliseconds: 50), () => _focusNode.requestFocus());
+                    }),
                   ),
-                  title: Text(items[i-1].displayName ?? items[i-1].phone ?? ''), // contact name
-                  onTap: () {}, // TODO: open conversation
-                ), 
-          );
-        },
+                ),
+                keyboardType: (_useDialpad)
+                  ? TextInputType.text
+                  : TextInputType.phone,
+                keyboardAppearance: Brightness.dark,
+                controller: _filterController,
+                focusNode: _focusNode,
+                autofocus: true,
+              ),
+            ],
+          ),
+        ),
       ),
+      body: _buildContactSelectionView(),
     );
   }
 }

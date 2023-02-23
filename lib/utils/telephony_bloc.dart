@@ -13,9 +13,9 @@ import 'package:telephony/telephony.dart';
 ///
 class TelephonyBloc {
 
-  final Telephony _instance = Telephony.instance;
+  final Telephony instance = Telephony.instance;
   final StringCache _cache = StringCache.load('spams.txt');
-  final SpamFilter _filter = const SpamFilter();
+  final SpamFilter _filter = SpamFilter();
 
   final ValueNotifier<SmsMessage?> lastestMessage = ValueNotifier(null);
   //final Map<String, ValueNotifier<SmsMessage?>> _listeners = {};
@@ -23,10 +23,11 @@ class TelephonyBloc {
   //---------------------------------------//
 
   TelephonyBloc.init() {
+    // TODO: https://stackoverflow.com/a/13895702
     [Permission.sms, Permission.contacts].request().then(
       (val) {
         if (val[Permission.sms] == PermissionStatus.granted) {
-          _instance.listenIncomingSms(
+          instance.listenIncomingSms(
             onNewMessage: _foregroundMessageHandler,
             onBackgroundMessage: _backgroundMessageHandler,
           );
@@ -43,24 +44,30 @@ class TelephonyBloc {
   void unblockAddresses(Iterable<String> addresses) => _cache.removeAll(addresses);
   void unblockAll() => _cache.clear();
 
+  bool isSpam(String address) => _cache.contains(address);
+  bool isNotSpam(String address) => !isSpam(address);
+
   //---------------------------------------//
 
   ///
-  void _foregroundMessageHandler(SmsMessage msg) {
+  Future<void> _foregroundMessageHandler(SmsMessage msg) async {
     // 1. classifiy message
-    // TODO: extract meta information
-    final isSpam = _filter.isSpam(msg.body!);
-    debugPrint(msg.address.toString());
-    debugPrint(isSpam.toString());
-    
+    final addr = msg.address ?? '';
+    //debugPrint(addr);
+    var isSpam = _cache.contains(addr);
+    if (!isSpam) {
+      final contact = await instance.getContactFromPhone(addr);
+      if (contact == null) {
+        isSpam = _filter.isSpam(msg.body!);
+      }
+    }
+
     // 2. record classification
-    if (isSpam && msg.address != null) {
-      _cache.add(msg.address!);
+    if (isSpam && addr.isNotEmpty) {
+      _cache.add(addr);
     }
 
     // 3. notify
-    //debugPrint('New Message: ${msg.threadId}, ${msg.address}, ${msg.date}');
-    //debugPrint('${_listeners.containsKey(msg.address)}');
     //_listeners[msg.address]?.value = msg;
     lastestMessage.value = msg;
   }
@@ -78,12 +85,14 @@ class TelephonyBloc {
   ///
   Future<List<Conversation>> getConversations() async {
     final res = <Conversation>[];
-    for (final c in await _instance.getConversations()) {
-      final ms = (await getConversationMessages(c.threadId)).first;
-      final ct = await _instance.getContactFromPhone(ms.address!);
-      final isSpam = _cache.contains(ms.address ?? '');
-      res.sortedInsert(Conversation(c, ms, ct, isSpam));
-      //res.add(Conversation(c, ms.first, ct));
+    for (final c in await instance.getConversations()) {
+      final ms = await _getConversationMessages(c.threadId);
+      if (ms.isNotEmpty) {
+        final ct = await instance.getContactFromPhone(ms.first.address!);
+        final isSpam = _cache.contains(ms.first.address!);
+        res.sortedInsert(Conversation(c, ms.first, ct, isSpam));
+        //res.add(Conversation(c, ms.first, ct, isSpam));
+      }
     }
     return res;
   }
@@ -91,13 +100,15 @@ class TelephonyBloc {
   //---------------------------------------//
 
   ///
-  Future<List<SmsMessage>> getConversationMessages(int? threadid) => _instance.getInboxSms(
-    columns: const [SmsColumn.THREAD_ID, SmsColumn.READ, SmsColumn.ADDRESS, SmsColumn.DATE],
-    filter: SmsFilter
-      .where(SmsColumn.THREAD_ID)
-      .equals(threadid.toString()),
-    sortOrder: [OrderBy(SmsColumn.DATE)],
-  );
+  Future<List<SmsMessage>> _getConversationMessages(int? threadid) {
+    return instance.getAllSms(
+      columns: const [SmsColumn.THREAD_ID, SmsColumn.READ, SmsColumn.ADDRESS, SmsColumn.DATE],
+      filter: SmsFilter
+        .where(SmsColumn.THREAD_ID)
+        .equals(threadid.toString()),
+      sortOrder: [OrderBy(SmsColumn.DATE)],
+    );
+  }
 
   //---------------------------------------//
 
@@ -106,41 +117,43 @@ class TelephonyBloc {
     if (threadid == null) {
       return <SmsMessage>[];
     }
-
-    final messages = (await _instance.getInboxSms(
-      columns: const [SmsColumn.THREAD_ID, SmsColumn.BODY, SmsColumn.STATUS, SmsColumn.DATE],
-      filter: SmsFilter
-        .where(SmsColumn.THREAD_ID)
-        .equals(threadid.toString()),
-      sortOrder: [OrderBy(SmsColumn.DATE)],
-    )).toList(growable: true);
-
-    final sent = await _instance.getSentSms(
-      columns: const [SmsColumn.THREAD_ID, SmsColumn.BODY, SmsColumn.STATUS, SmsColumn.DATE, SmsColumn.TYPE, SmsColumn.STATUS],
+    return instance.getAllSms(
+      columns: [SmsColumn.ID, SmsColumn.THREAD_ID, SmsColumn.BODY, SmsColumn.READ, SmsColumn.DATE, SmsColumn.TYPE, SmsColumn.STATUS],
       filter: SmsFilter
         .where(SmsColumn.THREAD_ID)
         .equals(threadid.toString()),
       sortOrder: [OrderBy(SmsColumn.DATE)],
     );
-
-    // join both lists
-    for (var m in sent) {
-      messages.sortedInsert(m);
-    }
-    
-    return messages.toList(growable: false);
   }
 
   //---------------------------------------//
 
   ///
+  //Future<void> markSmsAsRead(SmsMessage from) async {
+  //  final messages = await instance.getInboxSms(
+  //    columns: const [SmsColumn.ID, SmsColumn.THREAD_ID, SmsColumn.READ, SmsColumn.DATE],
+  //    filter: SmsFilter
+  //      .where(SmsColumn.THREAD_ID)
+  //      .equals(from.threadId.toString())
+  //      .and(SmsColumn.READ)
+  //      .equals(false.toString())
+  //      .and(SmsColumn.DATE)
+  //      .lessThan(from.date.toString()),
+  //    sortOrder: [OrderBy(SmsColumn.DATE)],
+  //  );
+  //  final idx = messages.map((m) => m.id ?? 0).toList(growable: false);
+  //  instance.markSmsAsRead(idx);
+  //}
+
+  //---------------------------------------//
+
+  ///
   void sendMessage(String address, String body, [dynamic Function(SendStatus)? callback]) {
-    _instance.sendSms(
+    instance.sendSms(
       to: address,
       message: body,
       statusListener: callback,
       isMultipart: body.length > 160,
     );
   }
-
 }

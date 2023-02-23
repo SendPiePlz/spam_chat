@@ -26,32 +26,27 @@ class Conversation implements Comparable<Conversation> {
   bool get hasContact => contact != null;
   String get displayName => contact?.displayName ?? getFormattedAddress();
 
-  bool get hasThumbnail => contact?.thumbnail != null;
-  ImageProvider? get thumbnail => (hasThumbnail) ? MemoryImage(contact!.thumbnail!) : null;
-
+  ///
   CircleAvatar get avatar {
-    Color bColor = Colors.accents[Random(threadId).nextInt(Colors.accents.length)];
-    Widget over = const Icon(Icons.person, color: Colors.black);
-    
     if (hasContact) {
-      over = Text(
-        displayName[0],
-        style: const TextStyle(color: Colors.black,),
-      );
+      return contact!.avatar;
     }
     else if (isSpam) {
-      over = Icon(Icons.warning, color: Colors.pink.shade100,);
-      bColor = Colors.redAccent;
+      return CircleAvatar(
+        backgroundColor: Colors.red,
+        child: Icon(Icons.warning, color: Colors.pink.shade100),
+      );
     }
-    
-    return CircleAvatar(
-      backgroundImage: thumbnail,
-      backgroundColor: bColor,
-      child: (hasThumbnail) ? null : over,
-    );
+    else {
+      final i = Random(threadId).nextInt(Colors.accents.length);
+      return CircleAvatar(
+        backgroundColor: Colors.accents[i],
+        child: const Icon(Icons.person, color: Colors.black),
+      );
+    }
   }
 
-
+  ///
   String getFormattedAddress() {
     if (smsInfo.address != null) {
       final addr = smsInfo.address!;
@@ -61,8 +56,6 @@ class Conversation implements Comparable<Conversation> {
     return 'Unknown';
   }
 
-  ///
-  ///
   ///
   String get formattedDate {
     final date = DateTime.fromMillisecondsSinceEpoch(smsInfo.date ?? 0);

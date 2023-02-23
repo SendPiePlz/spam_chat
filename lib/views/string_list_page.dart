@@ -17,7 +17,7 @@ class StringListPage extends StatefulWidget {
   final String title;
   final List<String> items;
   final Function onClear;
-  final Function(Iterable<String>) onDelete;
+  final void Function(Iterable<String>) onDelete;
 
   @override
   State<StringListPage> createState() => _StringListPageState();

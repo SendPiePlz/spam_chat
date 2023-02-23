@@ -1,3 +1,6 @@
+import 'dart:math';
+
+import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:spam_chat/models/conversation.dart';
 import 'package:telephony/telephony.dart';
@@ -5,8 +8,8 @@ import 'package:telephony/telephony.dart';
 //=================================================//
 
 extension Classification on String {
-  /// Checks if a string is composed of only letters and numbers [a-z0-9].
-  // (Assumes the string to be lower case.)
+  /// Checks if a string is composed of only letters and numbers [0-9a-z].
+  /// (Assumes the string to be lower case.)
   bool isalnum() {
     for (final r in runes) {
       if (r < 48 || (r > 57 && r < 97) || r > 122) {
@@ -16,8 +19,19 @@ extension Classification on String {
     return true;
   }
 
+  /// Checks if a string is composed of only hexadecimal characters [0-9a-f].
+  /// (Assumes the string to be lower case.)
+  bool ishex() {
+    for (final r in runes) {
+      if (r < 48 || (r > 57 && r < 97) || r > 102) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   /// Checks if a string is composed of only letters [a-z].
-  // (Assumes the string to be lower case.)
+  /// (Assumes the string to be lower case.)
   bool isalpha() {
     for (final r in runes) {
       if (r < 97 || r > 122) {
@@ -25,6 +39,62 @@ extension Classification on String {
       }
     }
     return true;
+  }
+
+  /// Checks if a string is composed of only digits [0-9].
+  bool isdigit() {
+    for (final r in runes) {
+      if (r < 48 || r > 57) {
+        return false;
+      }
+    }
+    return true; 
+  }
+
+
+  static const _vowels = ['a','e','i','o','u','y'];
+
+  ///
+  bool isReadable() {
+    var total = 0;
+    var bads  = 0;
+    var i     = 0;
+    var cnt   = 1;
+    while (i < length) {
+      cnt = 1;
+      final v = _vowels.contains(this[i++]);
+      while (i < length && _vowels.contains(this[i]) == v) {
+        ++cnt; ++i;
+      }
+      if (cnt > 2) {
+        ++bads;
+      }
+      ++total;
+    }
+    return (bads / total) < 0.2;
+  }
+}
+
+//=================================================//
+
+extension ContactAvatar on Contact {
+  ///
+  CircleAvatar get avatar {
+    int cIndex = Random(displayName.hashCode).nextInt(Colors.accents.length);
+    Color bColor = Colors.accents[cIndex];
+    if (thumbnail != null) {
+      return CircleAvatar(
+        backgroundColor: bColor,
+        backgroundImage: MemoryImage(thumbnail!),
+      );
+    }
+    return CircleAvatar(
+      backgroundColor: bColor,
+      child: Text(
+        displayName?[0] ?? 'T',
+        style: const TextStyle(color: Colors.black),
+      ),
+    );
   }
 }
 

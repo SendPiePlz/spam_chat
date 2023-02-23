@@ -10,27 +10,41 @@ import 'package:spam_chat/views/message_page.dart';
 ///
 ///
 class ConversationView extends ConsumerWidget {
-  const ConversationView({super.key});
-  
+  const ConversationView({super.key, required this.filter});
+
+  final bool Function(Conversation) filter;
+
+  ///
   void _onConversationSelected(BuildContext context, Conversation convo) {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => MessagePage(conversation: convo)),
+      MaterialPageRoute(builder: (_) => MessagePage.fromConversation(convo)),
     );
   }
 
+  ///
+  Widget _notificationCircle(Color color) => Container(
+    constraints: BoxConstraints.tight(
+      const Size.square(8)
+    ),
+    decoration: ShapeDecoration(
+      shape: const CircleBorder(),
+      color: color,
+    ),
+  );
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final telephone = ref.watch(telephonyProvider);
+    final tel = ref.read(telephonyProvider);
 
     return ValueListenableBuilder(
-      valueListenable: telephone.lastestMessage,
-      builder: (ctx, _, __) => StreamBuilder(
-        stream: telephone.getConversations().asStream(),
+      valueListenable: tel.lastestMessage,
+      builder: (ctx, _, __) => FutureBuilder(
+        future: tel.getConversations(),
         initialData: const <Conversation>[],
         builder: (ctx, snapshot) {
           if (snapshot.data?.isNotEmpty ?? false) {
-            final data = snapshot.requireData;
+            final data = snapshot.requireData.where(filter).toList(growable: false);
             return ListView.builder(
               itemCount: data.length,
               itemBuilder: (ctx, i) {
@@ -60,10 +74,11 @@ class ConversationView extends ConsumerWidget {
                       Text(data[i].formattedDate),
                       const SizedBox(width: 10),
                       (data[i].hasUnread)
-                        ? const CircleAvatar(
-                          backgroundColor: Colors.blueAccent,
-                          maxRadius: 4,
-                        ) : const SizedBox(),
+                        ? _notificationCircle((data[i].isSpam)
+                            ? Colors.red
+                            : Colors.blueAccent
+                          )
+                        : const SizedBox(),
                     ],
                   ),
                 );
