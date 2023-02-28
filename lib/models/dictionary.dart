@@ -7,7 +7,9 @@ import 'dart:typed_data';
 ///
 class Region {
   const Region(this.start, this.end)
-    : assert(start <= end);
+    : assert(start <= end)
+    , assert(start >= 0)
+    , assert(end >= 0);
 
   final int start;
   final int end;
@@ -43,8 +45,8 @@ class Dictionary {
   Float64x2? operator [](String key) {
     final r = _regions[key[0]];
     if (r != null) {
-      assert(r.start >= 0 && r.start < _items.length);
-      assert(r.end >= 0 && r.end < _items.length);
+      assert(r.start < _items.length);
+      assert(r.end < _items.length);
       var low  = r.start;
       var high = r.end;
       while (low <= high) {
@@ -56,7 +58,7 @@ class Dictionary {
         else if (cmp > 0) {
           low = mid+1;
         }
-        else { // early find
+        else { // found value
           return _items[mid].values;
         }
       }

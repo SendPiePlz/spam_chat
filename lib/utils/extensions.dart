@@ -54,7 +54,7 @@ extension Classification on String {
 
   static const _vowels = ['a','e','i','o','u','y'];
 
-  ///
+  /// Small naive algorithms that aims to categorizing words as either readable, `true`, or gibberish, `false`.
   bool isReadable() {
     var total = 0;
     var bads  = 0;
@@ -142,46 +142,24 @@ extension FormatDateTime on DateTime {
 
 //=================================================//
 
-extension SortedInsertConversations on List<Conversation> {
-  ///
-  void sortedInsert(Conversation value) {
-    var left = 0;
-    var right = length-1;
-    while (left <= right) {
-      final int mid = left + (right - left) ~/ 2;
-      if (this[mid] < value) {
-        left = mid + 1;
+extension SortedInsert<T extends Comparable<T>> on List<T> {
+  /// 
+  void sortedInsert(T item) {
+    var low = 0;
+    var high = length-1;
+    while (low <= high) {
+      final mid = low + (high - low) ~/ 2;
+      final cmp = item.compareTo(this[mid]);
+      if (cmp < 0) {
+        high = mid - 1;
       }
-      else if (this[mid] > value) {
-        right = mid - 1;
-      }
-      else {
-        right = mid + 1;
-      }
-    }
-    insert(left, value);
-  }
-}
-
-extension SortedInsertMessages on List<SmsMessage> {
-  ///
-  void sortedInsert(SmsMessage value) {
-    final date = value.date ?? 0;
-    var left = 0;
-    var right = length-1;
-    while (left <= right) {
-      final int mid = left + (right - left) ~/ 2;
-      final midValue = this[mid].date ?? 0;
-      if (midValue > date) {
-        left = mid + 1;
-      }
-      else if (midValue < date) {
-        right = mid - 1;
+      else if (cmp > 0) {
+        low = mid + 1;
       }
       else {
-        right = mid + 1;
+        high = mid + 1;
       }
     }
-    insert(left, value);
+    insert(low, item);
   }
 }

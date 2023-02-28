@@ -1,4 +1,6 @@
+import 'package:binary_tree/binary_tree.dart';
 import 'package:flutter/material.dart';
+import 'package:spam_chat/models/cache.dart';
 
 //=================================================//
 
@@ -14,6 +16,15 @@ class StringListPage extends StatefulWidget {
     required this.onDelete,
   });
 
+  factory StringListPage.fromCache(String title, Cache<String> cache) {
+    return StringListPage(
+      title: title,
+      items: cache.content,
+      onClear: cache.clear,
+      onDelete: cache.removeAll,
+    );
+  }
+
   final String title;
   final List<String> items;
   final Function onClear;
@@ -27,25 +38,28 @@ class StringListPage extends StatefulWidget {
 
 ///
 class _StringListPageState extends State<StringListPage> {
+  final selected = BinaryTree<int>([]);
 
-  final Set<int> selected = {};
-
+  ///
   void _clearItems(BuildContext context) {
-    showDialog<bool>(
+    showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Warning'),
         content: const Text('Delete All Items?'),
         actions: [
           TextButton(
-            onPressed: () => setState(() {
-              widget.onClear();
-              widget.items.clear();
-            }),
+            onPressed: () {
+              setState(() {
+                widget.onClear();
+                widget.items.clear();
+              });
+              Navigator.of(ctx).pop();
+            },
             child: const Text('Yes'),
           ),
           TextButton(
-            onPressed: () {},
+            onPressed: () => Navigator.of(ctx).pop(),
             child: const Text('No'),
           ),
         ],
@@ -53,23 +67,30 @@ class _StringListPageState extends State<StringListPage> {
     );
   }
 
+  ///
   void _deleteItems(BuildContext context) {
-    showDialog<bool>(
+    showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Warning'),
         content: Text('Delete ${selected.length} Items?'),
         actions: [
           TextButton(
-            onPressed: () => setState(() {
-              widget.onDelete(selected.map((i) => widget.items[i]));
-              selected.forEach(widget.items.removeAt);
-              selected.clear();
-            }),
+            onPressed: () {
+              setState(() {
+                widget.onDelete(selected.map((i) => widget.items[i]));
+                selected.toList(growable: false).reversed.forEach(widget.items.removeAt);
+                selected.clear();
+              });
+              Navigator.of(ctx).pop();
+            },
             child: const Text('Yes'),
           ),
           TextButton(
-            onPressed: () => setState(selected.clear),
+            onPressed: () {
+              setState(selected.clear);
+              Navigator.of(ctx).pop();
+            },
             child: const Text('No'),
           ),
         ],
@@ -77,9 +98,13 @@ class _StringListPageState extends State<StringListPage> {
     );
   }
 
+  ///
   void _toggleSelection(int item) => setState(() {
-    if (!selected.add(item)) {
+    if (selected.contains(item)) {
       selected.remove(item);
+    }
+    else {
+      selected.insert(item);
     }
   });
 

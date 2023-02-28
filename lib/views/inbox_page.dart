@@ -18,9 +18,28 @@ class InboxPage extends StatefulWidget {
 //=================================================//
 
 ///
-class _InboxPageState extends State<InboxPage> {
-
+class _InboxPageState extends State<InboxPage> with WidgetsBindingObserver {
   bool _hideSpam = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Redraw when app comes back into the foreground
+    if (state == AppLifecycleState.resumed) {
+      setState(() {});
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -51,7 +70,7 @@ class _InboxPageState extends State<InboxPage> {
         onPressed: () => Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const NewMessagePage()),
-        ),
+        ).then((_) => setState(() {})), // !?
         child: const Icon(Icons.sms),
       ),
       body: ConversationView(

@@ -21,7 +21,6 @@ class MessagePage extends ConsumerStatefulWidget {
     required this.conversation,
     required this.address,
     this.contact,
-    this.isSpam = false
   });
 
   factory MessagePage.fromConversation(Conversation conversation) {
@@ -29,35 +28,14 @@ class MessagePage extends ConsumerStatefulWidget {
       conversation: conversation.conversation,
       address: conversation.address,
       contact: conversation.contact,
-      isSpam: conversation.isSpam,
     );
   }
 
   final SmsConversation conversation;
   final String address;
   final Contact? contact;
-  final bool isSpam;
 
   String get displayName => contact?.displayName ?? address;
-
-  CircleAvatar get avatar {
-    if (contact != null) {
-      return contact!.avatar;
-    }
-    else if (isSpam) {
-      return CircleAvatar(
-        backgroundColor: Colors.red,
-        child: Icon(Icons.warning, color: Colors.pink.shade100),
-      );
-    }
-    else {
-      final i = Random(conversation.threadId).nextInt(Colors.accents.length);
-      return CircleAvatar(
-        backgroundColor: Colors.accents[i],
-        child: const Icon(Icons.person, color: Colors.black),
-      );
-    }
-  }
 
   @override
   ConsumerState<MessagePage> createState() => _MessagePageState();
@@ -66,7 +44,7 @@ class MessagePage extends ConsumerStatefulWidget {
 //=================================================//
 
 ///
-class _MessagePageState extends ConsumerState<MessagePage> {
+class _MessagePageState extends ConsumerState<MessagePage> with WidgetsBindingObserver {
   final TextEditingController _controller = TextEditingController();
   final FocusNode _focusNode = FocusNode();
   late final TelephonyBloc _telephone;
@@ -75,6 +53,53 @@ class _MessagePageState extends ConsumerState<MessagePage> {
   void initState() {
     super.initState();
     _telephone = ref.read(telephonyProvider);
+    _telephone.lastestMessage.addListener(_handleNewMessage);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Redraw when app comes back into the foreground
+    if (state == AppLifecycleState.resumed) {
+      setState(() {});
+    }
+  }
+
+  @override
+  void dispose() {
+    _telephone.lastestMessage.removeListener(_handleNewMessage);
+    super.dispose();
+  }
+
+  ///
+  void _handleNewMessage() {
+    final msg = _telephone.lastestMessage.value;
+    // Filter messages
+    if (msg != null && msg.address == widget.address) {
+      setState(() {});
+    }
+  }
+
+  ///
+  Future<void> _showDialog(BuildContext ctx, String title, Function action) async {
+    showDialog(
+      context: ctx,
+      builder: (ctx) => AlertDialog(
+        title: Text(title),
+        actions: [
+          TextButton(
+            onPressed: () {
+              action();
+              Navigator.of(ctx).pop();
+            },
+            child: const Text('Yes'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(), // Do Nothing
+            child: const Text('No'),
+          ),
+        ],
+      ),
+    );
   }
 
   ///
@@ -91,37 +116,58 @@ class _MessagePageState extends ConsumerState<MessagePage> {
     );
   }
 
+  CircleAvatar _getAvatar(bool isSpam) {
+    if (isSpam) {
+      return CircleAvatar(
+        backgroundColor: Colors.red,
+        child: Icon(Icons.warning, color: Colors.pink.shade100),
+      );
+    }
+    else if (widget.contact != null) {
+      return widget.contact!.avatar;
+    }
+    else {
+      final i = Random(widget.conversation.threadId).nextInt(Colors.accents.length);
+      return CircleAvatar(
+        backgroundColor: Colors.accents[i],
+        child: const Icon(Icons.person, color: Colors.black),
+      );
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
+    final isSpam = _telephone.isSpam(widget.address);
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.displayName),
         actions: [
-          // TODO
-          IconButton(
-            onPressed: () {},
-            icon: const Icon(Icons.block),
-          ),
+          (isSpam)
+            ? IconButton(
+                onPressed: () => _showDialog(context, 'Trust sender?', () => setState(() => _telephone.trustAddress(widget.address))),
+                icon: const Icon(Icons.add_moderator),
+              )
+            : IconButton(
+                onPressed: () => _showDialog(context, 'Mark As Spam?', () => setState(() => _telephone.markAsSpam(widget.address))),
+                icon: const Icon(Icons.block),
+              ),
         ],
       ),
       body: Column(
         children: [
-          ValueListenableBuilder(
-            valueListenable: _telephone.lastestMessage,
-            builder: (ctx, _, __) => FutureBuilder(
-              future: _telephone.getMessages(widget.conversation.threadId),
-              initialData: const <SmsMessage>[],
-              builder: (ctx, snapshot) {
-                return Expanded (
-                  child: MessageView(
-                    avatar: widget.avatar,
-                    isSpam: widget.isSpam,
-                    messages: snapshot.data ?? [],
-                  ),
-                );
-              },
-            ),
+          FutureBuilder(
+            future: _telephone.getMessages(widget.conversation.threadId),
+            initialData: const <SmsMessage>[],
+            builder: (ctx, snapshot) {
+              return Expanded (
+                child: MessageView(
+                  messages: snapshot.data ?? [],
+                  avatar: _getAvatar(isSpam),
+                  isSpam: isSpam,
+                ),
+              );
+            },
           ),
           MessageInputField(
             focusNode: _focusNode,

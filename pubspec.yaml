@@ -35,11 +35,13 @@ dependencies:
   telephony:
     path: ./telephony/
 
+  binary_tree: ^1.0.5
+  intl: ^0.18.0
+
   url_launcher: ^6.1.9
   path_provider: ^2.0.12
   flutter_riverpod: ^2.2.0
   permission_handler: ^10.2.0
-  intl: ^0.18.0
   stemmer: ^2.2.0
   # sms_advanced: ^1.0.1
   # telephony: ^0.2.0

@@ -30,13 +30,18 @@ class SettingsPage extends ConsumerWidget {
       body: ListView(
         children: [
           ListTile(
-            title: const Text('Blocked numbers'),
-            onTap: () => _navigateTo(context, StringListPage(
-              title: 'Blocked Numbers',
-              items: telephone.blockedAddresses,
-              onClear: telephone.unblockAll,
-              onDelete: telephone.unblockAddresses,
-            )),
+            title: const Text('Blacklisted numbers'),
+            onTap: () => _navigateTo(
+              context,
+              StringListPage.fromCache('Blacklisted Numbers', telephone.spamCache)
+            ),
+          ),
+          ListTile(
+            title: const Text('Whitelisted numbers'),
+            onTap: () => _navigateTo(
+              context,
+              StringListPage.fromCache('Whitelisted Numbers', telephone.hamCache)
+            ),
           ),
           ListTile(
             title: const Text('Trusted URLs'),

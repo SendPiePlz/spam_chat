@@ -28,20 +28,20 @@ class Conversation implements Comparable<Conversation> {
 
   ///
   CircleAvatar get avatar {
-    if (hasContact) {
-      return contact!.avatar;
-    }
-    else if (isSpam) {
+    if (isSpam) {
       return CircleAvatar(
         backgroundColor: Colors.red,
         child: Icon(Icons.warning, color: Colors.pink.shade100),
       );
     }
+    else if (hasContact) {
+      return contact!.avatar;
+    }
     else {
-      final i = Random(threadId).nextInt(Colors.accents.length);
+      final i = Random(address.hashCode).nextInt(Colors.accents.length);
       return CircleAvatar(
         backgroundColor: Colors.accents[i],
-        child: const Icon(Icons.person, color: Colors.black),
+        child: const Icon(Icons.person, color: Colors.black), // Icons.account_circle_rounded
       );
     }
   }
@@ -62,13 +62,10 @@ class Conversation implements Comparable<Conversation> {
     return date.formatConversationDateTime();
   }
 
-  bool operator <(Conversation other) => compareTo(other) < 0;  
-  bool operator >(Conversation other) => compareTo(other) > 0;
-
   @override
   int compareTo(Conversation other) {
     final d1 = smsInfo.date ?? 0;
     final d2 = other.smsInfo.date ?? 0;
-    return d2.compareTo(d1);
+    return d2.compareTo(d1); // inverse comparison
   }
 }

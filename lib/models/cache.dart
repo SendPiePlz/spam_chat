@@ -33,7 +33,7 @@ class Cache<T> {
           );
         }
       },
-      onError: (e, s) {
+      onError: (e) {
         throw Exception(e);
       });
     }
@@ -45,7 +45,7 @@ class Cache<T> {
   //---------------------------------------//
 
   ///
-  Future<void> _save() async {
+  void _save() {
     try {
       File(_path).writeAsString(_cache.map(_outParser).join('\n'));
     }
@@ -57,7 +57,7 @@ class Cache<T> {
   //---------------------------------------//
 
   ///
-  List<T> get content => _cache.cast<T>().toList(growable: false);
+  List<T> get content => _cache.cast<T>().toList();
 
   ///
   bool contains(T item) => _cache.contains(item);

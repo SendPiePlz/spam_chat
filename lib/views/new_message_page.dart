@@ -17,7 +17,6 @@ import 'package:telephony/telephony.dart';
 class NewMessagePage extends ConsumerStatefulWidget {
   const NewMessagePage({super.key});
 
-
   @override
   ConsumerState<NewMessagePage> createState() => _NewMessagePageState();
 }
@@ -53,6 +52,7 @@ class _NewMessagePageState extends ConsumerState<NewMessagePage> {
   void dispose() {
     _filterController.dispose();
     _msgController.dispose();
+    _focusNode.removeListener(_handleFocusChange);
     _focusNode.dispose();
     super.dispose();
   }
@@ -63,20 +63,21 @@ class _NewMessagePageState extends ConsumerState<NewMessagePage> {
       // focus changes back to recipient selection
       setState(() {
         _contactSelected = false;
+        _selectedContact = null;
+        _isSelectionCustom = false;
       });
     }
   }
 
   ///
   void _openMessageView(BuildContext ctx, SmsConversation convo, String addr, Contact? contact) {
-    // TODO
+    // TODO: fix error (not crash, thankfully)
     Navigator.pushReplacement(
       ctx,
       MaterialPageRoute(builder: (_) => MessagePage(
         conversation: convo,
         address: addr,
         contact: contact,
-        isSpam: _telephone.isSpam(addr),
       )),
     );
   }
@@ -91,7 +92,7 @@ class _NewMessagePageState extends ConsumerState<NewMessagePage> {
         if (status != SmsStatus.STATUS_FAILED) {
           _telephone.instance.getConversationFromPhone(addr).then((c) {
             if (c != null) {
-              _openMessageView(ctx, c, addr, (_isSelectionCustom) ? _selectedContact : null);
+              _openMessageView(ctx, c, addr, (!_isSelectionCustom) ? _selectedContact! : null);
             }
             else {
               // TODO: failed sending message
@@ -109,7 +110,7 @@ class _NewMessagePageState extends ConsumerState<NewMessagePage> {
     _telephone.instance.getConversationFromPhone(addr).then((c) {
       if (c != null) {
         // A conversation already exists
-        _openMessageView(ctx, c, addr, (_isSelectionCustom) ? _selectedContact : null);
+        _openMessageView(ctx, c, addr, (!_isSelectionCustom) ? _selectedContact! : null);
       }
       else {
         // New conversation
@@ -153,29 +154,6 @@ class _NewMessagePageState extends ConsumerState<NewMessagePage> {
   Widget _buildContactSelectionView() {
     return Column(
       children: [
-        //Container(
-        //  child: (_contactSelected)
-        //    ? TextField(
-        //        controller: _msgController,
-        //        autofocus: true,
-        //        maxLines: null,
-        //        onSubmitted: (_) => _sendInitialMessage(context),
-        //        decoration: InputDecoration(
-        //          suffix: ValueListenableBuilder(
-        //            valueListenable: _msgController,
-        //            builder: (ctx, val, _) => IconButton(
-        //              icon: const Icon(Icons.send),
-        //              disabledColor: Colors.white38,
-        //              color: Theme.of(ctx).colorScheme.secondary,
-        //              onPressed: (val.text.isNotEmpty)
-        //                ? () => _sendInitialMessage(ctx)
-        //                : null,
-        //            ),
-        //          ),
-        //        ),
-        //      )
-        //    : const SizedBox(),
-        //),
         (_contactSelected)
           ? MessageInputField(
               controller: _msgController,
@@ -198,17 +176,18 @@ class _NewMessagePageState extends ConsumerState<NewMessagePage> {
                   }
                   return c.displayName?.toLowerCase().startsWith(val.text.toLowerCase()) ?? false;
                 }).toList();
-                var len = items.length;
+                final len = items.length;
 
                 // Add fake contact to the list for custom phone number
+                var hasCustom = false;
                 if (isPhone.hasMatch(val.text)) {
                   items.add(Contact.fromMap({'displayName': 'Custom', 'phone': _tryFormatPhone(val.text)}, false));
-                  ++len;
+                  hasCustom = true;
                 }
 
                 // Render contact list
                 return ListView.builder(
-                  itemCount: len,
+                  itemCount: items.length,
                   itemBuilder: (ctx, i) => ListTile(
                     leading: items[i].avatar,
                     title: Text(items[i].displayName ?? ''),
@@ -218,7 +197,7 @@ class _NewMessagePageState extends ConsumerState<NewMessagePage> {
                     ),
                     onTap: () {
                       _selectedContact = items[i];
-                      _isSelectionCustom = i == items.length;
+                      _isSelectionCustom = hasCustom && i == len;
                       _onRecipientSelected(ctx);
                     }
                   ), 

@@ -16,13 +16,13 @@ class MessageView extends ConsumerWidget {
   const MessageView({
     super.key,
     required this.messages,
-    required this.isSpam,
     required this.avatar,
+    required this.isSpam,
   });
 
   final List<SmsMessage> messages;
-  final bool isSpam;
   final CircleAvatar avatar;
+  final bool isSpam;
 
   /// Groups messages that were
   List<List<SmsMessage>> _groupMessages() {
@@ -105,11 +105,14 @@ class MessageBox extends StatelessWidget {
         child: const Text('Trust'),
       ),
       TextButton(
-        onPressed: () => _launchUrl(url),
+        onPressed: () {
+          _launchUrl(url);
+          Navigator.of(ctx).pop();
+        },
         child: const Text('Yes'),
       ),
       TextButton(
-        onPressed: () {}, // Do Nothing
+        onPressed: () => Navigator.of(ctx).pop(), // Do Nothing
         child: const Text('No'),
       ),
     ];
