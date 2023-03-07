@@ -143,15 +143,17 @@ class _MessagePageState extends ConsumerState<MessagePage> with WidgetsBindingOb
       appBar: AppBar(
         title: Text(widget.displayName),
         actions: [
-          (isSpam)
-            ? IconButton(
-                onPressed: () => _showDialog(context, 'Trust sender?', () => setState(() => _telephone.trustAddress(widget.address))),
-                icon: const Icon(Icons.add_moderator),
-              )
-            : IconButton(
-                onPressed: () => _showDialog(context, 'Mark As Spam?', () => setState(() => _telephone.markAsSpam(widget.address))),
-                icon: const Icon(Icons.block),
-              ),
+          (widget.contact != null)
+            ? const SizedBox()
+            : (isSpam)
+              ? IconButton(
+                  onPressed: () => _showDialog(context, 'Trust sender?', () => setState(() => _telephone.trustAddress(widget.address))),
+                  icon: const Icon(Icons.add_moderator),
+                )
+              : IconButton(
+                  onPressed: () => _showDialog(context, 'Mark As Spam?', () => setState(() => _telephone.markAsSpam(widget.address))),
+                  icon: const Icon(Icons.block),
+                ),
         ],
       ),
       body: Column(

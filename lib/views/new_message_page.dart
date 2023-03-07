@@ -16,6 +16,7 @@ import 'package:telephony/telephony.dart';
 ///
 class NewMessagePage extends ConsumerStatefulWidget {
   const NewMessagePage({super.key});
+  
 
   @override
   ConsumerState<NewMessagePage> createState() => _NewMessagePageState();
@@ -25,7 +26,7 @@ class NewMessagePage extends ConsumerStatefulWidget {
 
 ///
 class _NewMessagePageState extends ConsumerState<NewMessagePage> {
-  final isPhone = RegExp(r"\+?\d+|(\+\d)?(\d{3}) ?\d{3}-\d{4}|(\+\d)? \d{3}-\d{3}-\d{4}");
+  static final isPhone = RegExp(r"\+?\d+|(\+\d)?(\d{3}) ?\d{3}-\d{4}|(\+\d)? \d{3}-\d{3}-\d{4}");
 
   final TextEditingController _filterController = TextEditingController();
   final TextEditingController _msgController = TextEditingController();

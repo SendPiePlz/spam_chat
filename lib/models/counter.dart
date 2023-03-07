@@ -1,5 +1,3 @@
-import 'dart:collection';
-
 //=================================================//
 
 ///
@@ -7,18 +5,25 @@ import 'dart:collection';
 ///
 class Counter<K> {
   Counter()
-    : _items = SplayTreeMap()
+    : _items = {}
     , _filtered = false;
 
   Counter.withFilter(Iterable<K> keys)
-    : _items = SplayTreeMap.fromIterables(keys, List.filled(keys.length, 0))
+    : _items = Map.fromIterables(keys, List.filled(keys.length, 0))
     , _filtered = true;
 
   final Map<K, int> _items;
   final bool _filtered;
 
   ///
-  void clear() => _items.clear();
+  void clear() {
+    if (_filtered) {
+      _items.updateAll((_, __) => 0);
+    }
+    else {
+      _items.clear();
+    }
+  }
 
   ///
   int operator [](K key) {
@@ -28,17 +33,19 @@ class Counter<K> {
 
   ///
   void push(K key) {
-    final v = _items[key];
-    if (v == null && !_filtered) {
-      _items[key] = 1;
+    if (_filtered && _items.containsKey(key)) {
+      _items.update(key, (v) => ++v);
     }
-    else if (v != null) {
-      _items[key] = v + 1; 
+    else {
+      _items.update(key, (v) => ++v, ifAbsent: () => 1);
     }
   }
 
   ///
   void pushAll(Iterable<K> keys) => keys.forEach(push);
+
+  ///
+  Iterable<MapEntry<K, int>> get entries => _items.entries;
 
   ///
   Iterable<int> get counts => _items.values;

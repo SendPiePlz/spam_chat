@@ -48,12 +48,12 @@ class Conversation implements Comparable<Conversation> {
 
   ///
   String getFormattedAddress() {
-    if (smsInfo.address != null) {
+    if (smsInfo.address != null && smsInfo.address!.length >= 10) {
       final addr = smsInfo.address!;
       final addr2 = (addr[0] != '+') ? addr : addr.substring(2);
       return '(${addr2.substring(0, 3)}) ${addr2.substring(3, 6)}-${addr2.substring(6)}';
     }
-    return 'Unknown';
+    return smsInfo.address ?? 'Unknown';
   }
 
   ///

@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 
+import 'package:spam_chat/ai/transformer.dart';
 import 'package:spam_chat/models/dictionary.dart';
-import 'package:spam_chat/models/transformer.dart';
 
 //=================================================//
 

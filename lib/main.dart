@@ -23,7 +23,7 @@ void main() async {
 //=================================================//
 
 ///
-final telephonyProvider = Provider((_) => TelephonyBloc.init());
+final telephonyProvider = Provider((_) => TelephonyBloc());
 
 ///
 final urlFilterProvider = Provider((_) => UrlFilter());

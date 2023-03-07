@@ -2,7 +2,6 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:spam_chat/models/conversation.dart';
 import 'package:telephony/telephony.dart';
 
 //=================================================//

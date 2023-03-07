@@ -1,12 +1,8 @@
-import 'package:spam_chat/models/dictionary.dart';
-import 'package:spam_chat/models/transformer.dart';
-import 'package:spam_chat/models/string_classifier.dart';
+import 'package:spam_chat/ai/spam_vocabulary.dart';
+import 'package:spam_chat/ai/transformer.dart';
+import 'package:spam_chat/ai/string_classifier.dart';
 import 'package:spam_chat/utils/extensions.dart';
 import 'package:stemmer/PorterStemmer.dart';
-
-//=================================================//
-
-part 'spam_vocabulary.dart';
 
 //=================================================//
 
@@ -32,7 +28,7 @@ class SpamTransofmer implements Transformer<String, String> {
 
   final _stemmer = PorterStemmer();
 
-  static final _split = RegExp(r'\s');
+  static final _split = RegExp(r'\W');
   static final _url = RegExp(r'^(https?:\/\/)?(([^/\s]+\.)+[^/\s]+)(\/\S*)?$');
   static final _num = RegExp(r'^\d+(\.\d+)?\w{0,3}$');
 
@@ -92,8 +88,8 @@ class SpamTransofmer implements Transformer<String, String> {
   ///
   String _removeExtraChars(String word) {
     final result = StringBuffer(word[0]);
-    var cc       = word[0]; // current char
-    var ccc      = 1;       // current char count
+    var cc  = word[0]; // current char
+    var ccc = 1;       // current char count
     for (int i = 1; i < word.length; ++i) {
       if (word[i] == cc) {
         if (ccc == 1) {
@@ -111,20 +107,20 @@ class SpamTransofmer implements Transformer<String, String> {
   }
 
   ///
-  String _removeWrappingPunc(String word) {
-    var s = 0;
-    var e = word.length-1;
-    while (s < word.length && !word[s].isalnum()) { ++s; }
-    while (e > s && !word[e].isalnum()) { --e; }
-    return word.substring(s, e+1);
-  }
+  //String _removeWrappingPunc(String word) {
+  //  var s = 0;
+  //  var e = word.length-1;
+  //  while (s < word.length && !word[s].isalnum()) { ++s; }
+  //  while (e > s && !word[e].isalnum()) { --e; }
+  //  return word.substring(s, e+1);
+  //}
 
   ///
   String _normalize(String word) {
     if (word.isEmpty) return word;
     word = _removeExtraChars(word);
     word = _removeAccents(word);
-    word = _removeWrappingPunc(word);
+    //word = _removeWrappingPunc(word);
     // TODO: replacements?
     return word;
   }  

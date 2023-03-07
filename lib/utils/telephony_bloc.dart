@@ -22,7 +22,7 @@ class TelephonyBloc {
 
   //---------------------------------------//
 
-  TelephonyBloc.init() {
+  TelephonyBloc() {
     // TODO: https://stackoverflow.com/a/13895702
     [Permission.sms, Permission.contacts].request().then(
       (val) {

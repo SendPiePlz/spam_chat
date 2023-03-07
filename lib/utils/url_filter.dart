@@ -1,15 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:spam_chat/ai/transformer.dart';
+import 'package:spam_chat/ai/url_decision_tree.dart';
 import 'package:spam_chat/models/cache.dart';
 import 'package:spam_chat/models/counter.dart';
-//import 'package:spam_chat/models/dictionary.dart';
-import 'package:spam_chat/models/transformer.dart';
-//import 'package:spam_chat/models/vector_classifier.dart';
 import 'package:spam_chat/utils/extensions.dart';
-import 'package:spam_chat/utils/url_decision_tree.dart';
 
-//=================================================//
-
-//part 'url_vocabulary.dart';
 
 //=================================================//
 
@@ -17,15 +12,10 @@ import 'package:spam_chat/utils/url_decision_tree.dart';
 ///
 ///
 class UrlFilter {
-  UrlFilter();
-
-  //---------------------------------------//
-
-  //const _filter = VectorClassifier<String>(logLikelihoods, UrlTransformer());
-  final _filter = UrlDecisionTree(const UrlTransformer());
+  final _filter = UrlDecisionTree(UrlTransformer());
   final _cache = StringCache.load(r'urls.txt');
   
-  static final _urlPattern = RegExp(r'(https?:\/\/)?((([^/\s.]+\.)+[^/\s.]+)(\/\S*)?)');
+  static final _urlPattern = RegExp(r'(https?:\/\/)?((([^/\s.]+\.)+[^/\s.]+)(\/\S*)?\b)');
   static final _escChars = RegExp(r'@|\/\/');
 
   static const _baseTrustedDomains = <String>{
@@ -83,7 +73,7 @@ class UrlFilter {
   String? _extractDomain(String url) {
     final match = _urlPattern.firstMatch(url);
     if (match != null) {
-      return match.group(2);
+      return match[3];
     }
     return null;
   }
@@ -107,7 +97,8 @@ class UrlFilter {
       final addr  = m[3]!;
       final path  = m[5] ?? '';
       final ttd = _isTrusted(addr, path);
-      final isBad = !ttd || _filter.predict(url);
+      final isBad = (ttd) ? false : _filter.predict(url);
+      //debugPrint('$url => ${_filter.predict(url)}');
       return UrlMatch(m[0]!, isBad, ttd, m.start, m.end);
     });
   }
@@ -129,6 +120,18 @@ class UrlMatch {
 
   static final _proto = RegExp(r'https?:\/\/');
 
+  ///
+  List<String> get components {
+    final wh = urlWithoutProtocol;
+    var i = 0;
+    while (i < wh.length && wh[i] != '/') { ++i; }
+    if (i == wh.length) {
+      return [wh, ''];
+    }
+    return [wh.substring(0, i), wh.substring(i)];
+  }
+
+  ///
   String get urlWithoutProtocol {
     if (url.startsWith(_proto)) {
       return url.replaceFirst(_proto, '');
@@ -140,79 +143,78 @@ class UrlMatch {
 //=================================================//
 
 ///
-class UrlTransformer implements Transformer<double, String> {
-  const UrlTransformer();
+class UrlTransformer implements Transformer<int, String> {
+  UrlTransformer();
 
   static const _TOKEN_NUM   = 1;
   static const _TOKEN_JUNK  = 2;
   static const _TOKEN_OTHER = 3;
-  static const _TOKEN_LWORD = 4;
+  static const _TOKEN_LONG  = 4;
   static const _TOKEN_WORD  = 5;
+  static const _TOKEN_SMALL = 6;
 
   static final _ip = RegExp(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(:\d{1,5})?$');
-  //static final _proto = RegExp(r'https?:\/\/');
-  static final _split = RegExp(r'[^\w\d]');
+  static final _split = RegExp(r'\W|[_\-]');
 
-  static final _tokenCt = Counter<int>();
-  static final _specCt = Counter<String>.withFilter([':','.','@','/','%','?']);
+  final _tokenCnt = Counter<int>();
+  final _specCnt  = Counter<String>.withFilter(['%','.','/',':','?','@']);
 
   @override
-  List<double> transform(String url) {
-    //if (url.startsWith(_proto)) {
-    //  url = url.replaceFirst(_proto, '');
-    //}
-    final ap = _splitAddressPath(url);
+  List<int> transform(String url) {
+    // NOTE: assumes the scheme has been removed
+    _tokenCnt.clear();
+    _tokenCnt.pushAll(url.split(_split).where((t) => t.isNotEmpty).map(categorize));
+    _specCnt.clear();
+    _specCnt.pushAll(url.characters);
 
-    _tokenCt.clear();
-    _tokenCt.pushAll(ap[0].split(_split).map(_categorize));
-    _specCt.clear();
-    _specCt.pushAll(url.characters);
-
-    //['%','.','/','//',':','?','@',ip,lenA,lenP,jnk,lword,num,other,word]
+    final ps = getPathStart(url);
+    
+    //['%','.','/','//',':','?','@',ip,lenA,lenP,jnk,long,num,other,small,word]
     return [
-      _specCt['%'].toDouble(),
-      _specCt['.'].toDouble(),
-      _specCt['/'].toDouble(),
-      ap[1].contains('//') ? 1 : 0,
-      _specCt[':'].toDouble(),
-      _specCt['?'].toDouble(),
-      _specCt['@'].toDouble(),
-      _ip.hasMatch(ap[0]) ? 1 : 0,
-      ap[0].length.toDouble(),
-      ap[1].length.toDouble(),
-      _tokenCt[_TOKEN_JUNK].toDouble(),
-      _tokenCt[_TOKEN_LWORD].toDouble(),
-      _tokenCt[_TOKEN_NUM].toDouble(),
-      _tokenCt[_TOKEN_OTHER].toDouble(),
-      _tokenCt[_TOKEN_WORD].toDouble(),
+      _specCnt['%'],
+      _specCnt['.'],
+      _specCnt['/'], // TODO: do not count trailing
+      url.contains('//') ? 1 : 0,
+      _specCnt[':'],
+      _specCnt['?'],
+      _specCnt['@'],
+      _ip.hasMatch(url.substring(0, ps)) ? 1 : 0,
+      ps,
+      url.length - ps,
+      _tokenCnt[_TOKEN_JUNK],
+      _tokenCnt[_TOKEN_LONG],
+      _tokenCnt[_TOKEN_NUM],
+      _tokenCnt[_TOKEN_OTHER],
+      _tokenCnt[_TOKEN_SMALL],
+      _tokenCnt[_TOKEN_WORD],
     ];
   }
 
   //---------------------------------------//
 
   ///
-  List<String> _splitAddressPath(String url) {
+  int getPathStart(String url) {
     var i = 0;
     while (i < url.length && url[i] != '/') { ++i; }
-    if (i == url.length) {
-      return [url, ''];
-    }
-    return [url.substring(0, i), url.substring(i)];
+    return i;
   }
 
   ///
-  int _categorize(String token) {
+  int categorize(String token) {
     if (token.isdigit()) {
       return _TOKEN_NUM;
     }
     if (!token.isalpha()) {
       return _TOKEN_OTHER;
     }
-    if (token.length > 4 && !token.isReadable()) {
+    if (token.length < 4) {
+      return _TOKEN_SMALL;
+    }
+    if (!token.isReadable()) {
       return _TOKEN_JUNK;
     }
     if (token.length > 15) {
-      return _TOKEN_LWORD;
+      return _TOKEN_LONG;
     }
     return _TOKEN_WORD;
   }
