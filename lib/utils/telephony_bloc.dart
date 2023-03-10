@@ -25,8 +25,8 @@ class TelephonyBloc {
   TelephonyBloc() {
     // TODO: https://stackoverflow.com/a/13895702
     [Permission.sms, Permission.contacts].request().then(
-      (val) {
-        if (val[Permission.sms] == PermissionStatus.granted) {
+      (ps) {
+        if (ps[Permission.sms] == PermissionStatus.granted) {
           instance.listenIncomingSms(
             onNewMessage: _foregroundMessageHandler,
             //onBackgroundMessage: _backgroundMessageHandler,
@@ -64,16 +64,16 @@ class TelephonyBloc {
   Future<void> _foregroundMessageHandler(SmsMessage msg) async {
     // 1. classifiy message
     final addr = msg.address ?? '';
-    var isSpam = spamCache.contains(addr);
-    if (!isSpam && !hamCache.contains(addr)) {
+    var spam = spamCache.contains(addr);
+    if (!spam && !hamCache.contains(addr)) {
       final contact = await instance.getContactFromPhone(addr);
       if (contact == null) {
-        isSpam = _filter.isSpam(msg.body!);
+        spam = _filter.isSpam(msg.body!);
       }
     }
 
     // 2. record classification
-    if (isSpam && addr.isNotEmpty) {
+    if (spam && addr.isNotEmpty) {
       spamCache.add(addr);
     }
 
@@ -94,11 +94,17 @@ class TelephonyBloc {
         final ct = await instance.getContactFromPhone(m.address!);
         var spam = false;
         if (ct == null && isNotHam(m.address!)) {
-          spam = isSpam(m.address!) ||
-                (ms.last.type == SmsType.MESSAGE_TYPE_INBOX && // conversation initiated by the other party
-                 m.type == SmsType.MESSAGE_TYPE_INBOX && // message body from other party
-                 _filter.isSpam(m.body ?? '')
-                );
+          spam = isSpam(m.address!);
+          if (!spam &&
+            ms.last.type == SmsType.MESSAGE_TYPE_INBOX &&
+            m.type == SmsType.MESSAGE_TYPE_INBOX &&
+            m.body != null &&
+            m.body!.isNotEmpty &&
+            _filter.isSpam(m.body!)
+          ) {
+            spam = true;
+            spamCache.add(m.address!);
+          }
         }
         res.sortedInsert(Conversation(c, m, ct, spam));
         //res.add(Conversation(c, m, ct, spam));
