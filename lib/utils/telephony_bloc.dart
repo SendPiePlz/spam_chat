@@ -87,26 +87,25 @@ class TelephonyBloc {
   Future<List<Conversation>> getConversations() async {
     final res = <Conversation>[];
     for (final c in await instance.getConversations()) {
-      //final ms = await _getConversationMessages(c.threadId);
-      final ms = await getMessages(c.threadId);
-      if (ms.isNotEmpty) {
-        final m = ms.first;
-        final ct = await instance.getContactFromPhone(m.address!);
+      final first = await _getSingleMessage(c.threadId);
+      final last = await _getSingleMessage(c.threadId, Sort.ASC);
+      if (first != null) {
+        final ct = await instance.getContactFromPhone(first.address!);
         var spam = false;
-        if (ct == null && isNotHam(m.address!)) {
-          spam = isSpam(m.address!);
+        if (ct == null && isNotHam(first.address!)) {
+          spam = isSpam(first.address!);
           if (!spam &&
-            ms.last.type == SmsType.MESSAGE_TYPE_INBOX &&
-            m.type == SmsType.MESSAGE_TYPE_INBOX &&
-            m.body != null &&
-            m.body!.isNotEmpty &&
-            _filter.isSpam(m.body!)
+            last!.type == SmsType.MESSAGE_TYPE_INBOX &&
+            first.type == SmsType.MESSAGE_TYPE_INBOX &&
+            first.body != null &&
+            first.body!.isNotEmpty &&
+            _filter.isSpam(first.body!)
           ) {
             spam = true;
-            spamCache.add(m.address!);
+            spamCache.add(first.address!);
           }
         }
-        res.sortedInsert(Conversation(c, m, ct, spam));
+        res.sortedInsert(Conversation(c, first, ct, spam));
         //res.add(Conversation(c, m, ct, spam));
       }
     }
@@ -115,8 +114,25 @@ class TelephonyBloc {
 
   //---------------------------------------//
 
+  Future<SmsMessage?> _getSingleMessage(int? threadid, [Sort order = Sort.DESC]) async {
+    final msg = await instance.getAllSms(
+      columns: [SmsColumn.THREAD_ID, SmsColumn.ADDRESS, SmsColumn.BODY, SmsColumn.READ, SmsColumn.DATE, SmsColumn.TYPE, SmsColumn.STATUS],
+      filter: SmsFilter
+        .where(SmsColumn.THREAD_ID)
+        .equals(threadid.toString()),
+      sortOrder: [OrderBy(SmsColumn.DATE, sort: order)],
+      amount: 1,
+    );
+    if (msg.isNotEmpty) {
+      return msg.first;
+    }
+    return null;
+  }
+
+  //---------------------------------------//
+
   ///
-  Future<List<SmsMessage>> getMessages(int? threadid) async {
+  Future<List<SmsMessage>> getMessages(int? threadid, [int amount = 0]) async {
     if (threadid == null) {
       return <SmsMessage>[];
     }
@@ -126,6 +142,7 @@ class TelephonyBloc {
         .where(SmsColumn.THREAD_ID)
         .equals(threadid.toString()),
       sortOrder: [OrderBy(SmsColumn.DATE)],
+      amount: amount,
     );
   }
 
