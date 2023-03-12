@@ -44,13 +44,13 @@ class _MessageBoxState extends State<MessageBox> {
   }
 
   ///
-  void _handleUrlAction(BuildContext ctx, UrlMatch url) {
+  void _handleUrlAction(UrlMatch url) {
     final actions = [
       TextButton(
         onPressed: () {
           widget.filter.trustUrl(url.url);
           _launchUrl(url);
-          Navigator.of(ctx).pop();
+          Navigator.of(context).pop();
           setState(() {});
         },
         child: const Text('Trust'),
@@ -58,18 +58,18 @@ class _MessageBoxState extends State<MessageBox> {
       TextButton(
         onPressed: () {
           _launchUrl(url);
-          Navigator.of(ctx).pop();
+          Navigator.of(context).pop();
         },
         child: const Text('Yes'),
       ),
       TextButton(
-        onPressed: () => Navigator.of(ctx).pop(), // Do Nothing
+        onPressed: () => Navigator.of(context).pop(), // Do Nothing
         child: const Text('No'),
       ),
     ];
     if (widget.isSpam || url.isBad) {
       showDialog(
-        context: ctx,
+        context: context,
         builder: (ctx) => AlertDialog(
           title: const Text('Open malicious URL?'),
           content: const Text('SpamChat has determined that this URL is malicious in nature. It is advised to not open it.'),
@@ -79,7 +79,7 @@ class _MessageBoxState extends State<MessageBox> {
     }
     else if (!url.isTrusted) {
       showDialog(
-        context: ctx,
+        context: context,
         builder: (ctx) => AlertDialog(
           title: const Text('Open unknown URL?'),
           content: const Text('Proceed with caution when opening unknown URLs.'),
@@ -103,7 +103,7 @@ class _MessageBoxState extends State<MessageBox> {
   }
 
   ///
-  List<TextSpan> _createHyperlinks(BuildContext ctx, String msg) {
+  List<TextSpan> _createHyperlinks(String msg) {
     // Highlight URLs
     final urls = widget.filter.extractUrls(msg);
     final spans = <TextSpan>[];
@@ -124,7 +124,7 @@ class _MessageBoxState extends State<MessageBox> {
               ? _getUrlStyle(Colors.yellow, TextDecorationStyle.wavy)
               : _getUrlStyle(Colors.blueAccent, TextDecorationStyle.solid),
           recognizer: TapGestureRecognizer()
-            ..onTap = () => _handleUrlAction(ctx, url),
+            ..onTap = () => _handleUrlAction(url),
         ));
       }
       // Add trailing text
@@ -139,7 +139,7 @@ class _MessageBoxState extends State<MessageBox> {
   }
 
   ///
-  Widget _buildBodyBubble(BuildContext ctx, SmsMessage message) {
+  Widget _buildBodyBubble(SmsMessage message) {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       constraints: const BoxConstraints(maxWidth: 300),
@@ -157,7 +157,7 @@ class _MessageBoxState extends State<MessageBox> {
           : null,
       ),
       child: RichText(
-        text: TextSpan(children: _createHyperlinks(ctx, message.body!))
+        text: TextSpan(children: _createHyperlinks(message.body!))
       ),
     );
   }
@@ -169,7 +169,7 @@ class _MessageBoxState extends State<MessageBox> {
     //if (messages.first.read == false) {
     //  tel.instance.markSmsAsRead(messages.first);
     //}
-    final bubbles = widget.messages.map((m) => _buildBodyBubble(context, m));
+    final bubbles = widget.messages.map(_buildBodyBubble);
     return Container(
       margin: const EdgeInsets.all(10),
       child: Row(

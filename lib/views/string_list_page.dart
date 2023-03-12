@@ -41,7 +41,7 @@ class _StringListPageState extends State<StringListPage> {
   final selected = BinaryTree<int>([]);
 
   ///
-  void _clearItems(BuildContext context) {
+  void _clearItems() {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -68,7 +68,7 @@ class _StringListPageState extends State<StringListPage> {
   }
 
   ///
-  void _deleteItems(BuildContext context) {
+  void _deleteItems() {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -117,11 +117,11 @@ class _StringListPageState extends State<StringListPage> {
           (selected.isEmpty)
             ? IconButton(
                 icon: const Icon(Icons.clear),
-                onPressed: () => _clearItems(context),
+                onPressed: _clearItems,
               )
             : IconButton(
                 icon: const Icon(Icons.delete),
-                onPressed: () => _deleteItems(context),
+                onPressed: _deleteItems,
               ),
         ],
       ),

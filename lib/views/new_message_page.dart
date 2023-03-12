@@ -16,7 +16,6 @@ import 'package:telephony/telephony.dart';
 ///
 class NewMessagePage extends ConsumerStatefulWidget {
   const NewMessagePage({super.key});
-  
 
   @override
   ConsumerState<NewMessagePage> createState() => _NewMessagePageState();
@@ -59,22 +58,25 @@ class _NewMessagePageState extends ConsumerState<NewMessagePage> {
   }
 
   ///
+  void _resetSelection() {
+    _contactSelected = false;
+    _selectedContact = null;
+    _isSelectionCustom = false;
+  }
+
+  ///
   void _handleFocusChange() {
     if (_focusNode.hasFocus && _contactSelected) {
       // focus changes back to recipient selection
-      setState(() {
-        _contactSelected = false;
-        _selectedContact = null;
-        _isSelectionCustom = false;
-      });
+      setState(_resetSelection);
     }
   }
 
   ///
-  void _openMessageView(BuildContext ctx, SmsConversation convo, String addr, Contact? contact) {
+  void _openMessageView(SmsConversation convo, String addr, Contact? contact) {
     // TODO: fix error (not crash, thankfully)
     Navigator.pushReplacement(
-      ctx,
+      context,
       MaterialPageRoute(builder: (_) => MessagePage(
         conversation: convo,
         address: addr,
@@ -84,7 +86,7 @@ class _NewMessagePageState extends ConsumerState<NewMessagePage> {
   }
 
   ///
-  void _sendInitialMessage(BuildContext ctx) {
+  void _sendInitialMessage() {
     final addr = _cleanAddress(_selectedContact!.phone ?? '');
     _telephone.sendMessage(
       addr,
@@ -93,11 +95,15 @@ class _NewMessagePageState extends ConsumerState<NewMessagePage> {
         if (status != SmsStatus.STATUS_FAILED) {
           _telephone.instance.getConversationFromPhone(addr).then((c) {
             if (c != null) {
-              _openMessageView(ctx, c, addr, (!_isSelectionCustom) ? _selectedContact! : null);
+              _openMessageView(c, addr, (_isSelectionCustom) ? null : _selectedContact);
             }
             else {
-              // TODO: failed sending message
-              // setState(() {});
+              // Failed sending message
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                backgroundColor: Colors.redAccent,
+                content: Text('Failed sending message to $addr'),
+              ));
+              setState(_resetSelection);
             }
           });
         }
@@ -106,20 +112,20 @@ class _NewMessagePageState extends ConsumerState<NewMessagePage> {
   }
 
   ///
-  void _onRecipientSelected(BuildContext ctx) {
-    final addr = _cleanAddress(_selectedContact?.phone ?? '');
+  void _onRecipientSelected() {
+    final addr = _cleanAddress(_selectedContact!.phone ?? '');
     _telephone.instance.getConversationFromPhone(addr).then((c) {
       if (c != null) {
         // A conversation already exists
-        _openMessageView(ctx, c, addr, (!_isSelectionCustom) ? _selectedContact! : null);
+        _openMessageView(c, addr, (_isSelectionCustom) ? null : _selectedContact);
       }
       else {
         // New conversation
         setState(() {
           _contactSelected = true;
           _filterController.text = (_isSelectionCustom)
-            ? _selectedContact?.phone ?? ''
-            : _selectedContact?.displayName ?? '';
+            ? _selectedContact!.phone ?? ''
+            : _selectedContact!.displayName ?? '';
           _focusNode.unfocus();
         });
       }
@@ -160,7 +166,7 @@ class _NewMessagePageState extends ConsumerState<NewMessagePage> {
               controller: _msgController,
               autofocus: true,
               maxHeight: 200,
-              onSubmitted: (_) => _sendInitialMessage(context),
+              onSubmitted: (_) => _sendInitialMessage(),
             )
           : const SizedBox(),
         Expanded(
@@ -179,7 +185,7 @@ class _NewMessagePageState extends ConsumerState<NewMessagePage> {
                 }).toList();
                 final len = items.length;
 
-                // Add fake contact to the list for custom phone number
+                // Add fake contact to the list for custom phone number (always last in the list)
                 var hasCustom = false;
                 if (isPhone.hasMatch(val.text)) {
                   items.add(Contact.fromMap({'displayName': 'Custom', 'phone': _tryFormatPhone(val.text)}, false));
@@ -197,9 +203,10 @@ class _NewMessagePageState extends ConsumerState<NewMessagePage> {
                       style: const TextStyle(color: Colors.white60),
                     ),
                     onTap: () {
+                      // Select recipient
                       _selectedContact = items[i];
                       _isSelectionCustom = hasCustom && i == len;
-                      _onRecipientSelected(ctx);
+                      _onRecipientSelected();
                     }
                   ), 
                 );

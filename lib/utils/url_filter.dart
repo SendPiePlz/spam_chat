@@ -22,7 +22,7 @@ class UrlFilter {
     'amazon.com',
     'apple.com',
     'bing.com',
-    //'docs.google.com', // 
+    //'docs.google.com',
     'duckduckgo.com',
     'facebook.com',
     'github.com',

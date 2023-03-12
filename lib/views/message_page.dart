@@ -80,21 +80,21 @@ class _MessagePageState extends ConsumerState<MessagePage> with WidgetsBindingOb
   }
 
   ///
-  Future<void> _showDialog(BuildContext ctx, String title, Function action) async {
+  Future<void> _showDialog(String title, Function action) async {
     showDialog(
-      context: ctx,
-      builder: (ctx) => AlertDialog(
+      context: context,
+      builder: (_) => AlertDialog(
         title: Text(title),
         actions: [
           TextButton(
             onPressed: () {
               action();
-              Navigator.of(ctx).pop();
+              Navigator.of(context).pop();
             },
             child: const Text('Yes'),
           ),
           TextButton(
-            onPressed: () => Navigator.of(ctx).pop(), // Do Nothing
+            onPressed: () => Navigator.of(context).pop(), // Do Nothing
             child: const Text('No'),
           ),
         ],
@@ -147,11 +147,11 @@ class _MessagePageState extends ConsumerState<MessagePage> with WidgetsBindingOb
             ? const SizedBox()
             : (isSpam)
               ? IconButton(
-                  onPressed: () => _showDialog(context, 'Trust sender?', () => setState(() => _telephone.trustAddress(widget.address))),
+                  onPressed: () => _showDialog('Trust sender?', () => setState(() => _telephone.trustAddress(widget.address))),
                   icon: const Icon(Icons.add_moderator),
                 )
               : IconButton(
-                  onPressed: () => _showDialog(context, 'Mark As Spam?', () => setState(() => _telephone.markAsSpam(widget.address))),
+                  onPressed: () => _showDialog('Mark As Spam?', () => setState(() => _telephone.markAsSpam(widget.address))),
                   icon: const Icon(Icons.block),
                 ),
         ],

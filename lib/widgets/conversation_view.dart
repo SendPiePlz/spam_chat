@@ -42,7 +42,7 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
   void _handleNewMessage() => setState(() {});
 
   ///
-  void _onConversationSelected(BuildContext context, Conversation convo) {
+  void _onConversationSelected(Conversation convo) {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => MessagePage.fromConversation(convo)),
@@ -74,7 +74,7 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
                 : const TextStyle(fontWeight: FontWeight.normal);
                 
               return ListTile(
-                onTap: () => _onConversationSelected(ctx, data[i]),
+                onTap: () => _onConversationSelected(data[i]),
                 //onLongPress: () {},
                 leading: data[i].avatar,
                 title: Text(

@@ -86,13 +86,16 @@ class TelephonyBloc {
   ///
   Future<List<Conversation>> getConversations() async {
     final res = <Conversation>[];
+    // Get information about each conversations
     for (final c in await instance.getConversations()) {
       final first = await _getSingleMessage(c.threadId);
-      final last = await _getSingleMessage(c.threadId, Sort.ASC);
       if (first != null) {
+        // Try retrieving a contact
         final ct = await instance.getContactFromPhone(first.address!);
         var spam = false;
         if (ct == null && isNotHam(first.address!)) {
+          // Check if conversation is spam
+          final last = await _getSingleMessage(c.threadId, Sort.ASC);
           spam = isSpam(first.address!);
           if (!spam &&
             last!.type == SmsType.MESSAGE_TYPE_INBOX &&
@@ -101,10 +104,12 @@ class TelephonyBloc {
             first.body!.isNotEmpty &&
             _filter.isSpam(first.body!)
           ) {
+            // Newly found spam conversation
             spam = true;
             spamCache.add(first.address!);
           }
         }
+        // Insert conversation in datetime order
         res.sortedInsert(Conversation(c, first, ct, spam));
         //res.add(Conversation(c, m, ct, spam));
       }
