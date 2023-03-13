@@ -25,7 +25,7 @@ class NewMessagePage extends ConsumerStatefulWidget {
 
 ///
 class _NewMessagePageState extends ConsumerState<NewMessagePage> {
-  static final isPhone = RegExp(r"\+?\d+|(\+\d)?(\d{3}) ?\d{3}-\d{4}|(\+\d)? \d{3}-\d{3}-\d{4}");
+  static final isPhone = RegExp(r"\+?\d+|(\+\d)?(\(\d{3}\) ?|\d{3}-)\d{3}-\d{4}");
 
   final TextEditingController _filterController = TextEditingController();
   final TextEditingController _msgController = TextEditingController();
@@ -66,7 +66,7 @@ class _NewMessagePageState extends ConsumerState<NewMessagePage> {
 
   ///
   void _handleFocusChange() {
-    if (_focusNode.hasFocus && _contactSelected) {
+    if (mounted && _focusNode.hasFocus && _contactSelected) {
       // focus changes back to recipient selection
       setState(_resetSelection);
     }
@@ -74,15 +74,22 @@ class _NewMessagePageState extends ConsumerState<NewMessagePage> {
 
   ///
   void _openMessageView(SmsConversation convo, String addr, Contact? contact) {
-    // TODO: fix error (not crash, thankfully)
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (_) => MessagePage(
-        conversation: convo,
-        address: addr,
-        contact: contact,
-      )),
-    );
+    // TODO: fix null exception; doesn't affect anything,
+    // but would be nice if it didn't happen
+    try {
+      Navigator.pushReplacement<void, void>(
+        context,
+        MaterialPageRoute(builder: (_) => MessagePage(
+          conversation: convo,
+          address: addr,
+          contact: contact,
+        )),
+      );
+    }
+    catch (e) {
+      // ignore??
+      //debugPrint(e.toString());
+    }
   }
 
   ///
@@ -92,18 +99,17 @@ class _NewMessagePageState extends ConsumerState<NewMessagePage> {
       addr,
       _msgController.text,
       (status) {
-        if (status != SmsStatus.STATUS_FAILED) {
+        if (status == SmsStatus.STATUS_FAILED) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            backgroundColor: Colors.redAccent,
+            content: Text('Failed sending message to $addr'),
+          ));
+          setState(_resetSelection);
+        }
+        else {
           _telephone.instance.getConversationFromPhone(addr).then((c) {
             if (c != null) {
               _openMessageView(c, addr, (_isSelectionCustom) ? null : _selectedContact);
-            }
-            else {
-              // Failed sending message
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                backgroundColor: Colors.redAccent,
-                content: Text('Failed sending message to $addr'),
-              ));
-              setState(_resetSelection);
             }
           });
         }
@@ -183,6 +189,7 @@ class _NewMessagePageState extends ConsumerState<NewMessagePage> {
                   }
                   return c.displayName?.toLowerCase().startsWith(val.text.toLowerCase()) ?? false;
                 }).toList();
+                // Save length for future custom selection check
                 final len = items.length;
 
                 // Add fake contact to the list for custom phone number (always last in the list)

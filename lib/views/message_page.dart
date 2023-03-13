@@ -145,15 +145,27 @@ class _MessagePageState extends ConsumerState<MessagePage> with WidgetsBindingOb
         actions: [
           (widget.contact != null)
             ? const SizedBox()
-            : (isSpam)
-              ? IconButton(
-                  onPressed: () => _showDialog('Trust sender?', () => setState(() => _telephone.trustAddress(widget.address))),
-                  icon: const Icon(Icons.add_moderator),
-                )
-              : IconButton(
-                  onPressed: () => _showDialog('Mark As Spam?', () => setState(() => _telephone.markAsSpam(widget.address))),
-                  icon: const Icon(Icons.block),
-                ),
+            : PopupMenuButton(
+                position: PopupMenuPosition.under,
+                onSelected: (s) {
+                  if (s == 0) {
+                    _showDialog('Trust sender?', () => setState(() => _telephone.trustAddress(widget.address)));
+                  }
+                  else {
+                    _showDialog('Mark As Spam?', () => setState(() => _telephone.markAsSpam(widget.address)));
+                  }
+                },
+                itemBuilder: (ctx) => [(isSpam)
+                  ? const PopupMenuItem(
+                      value: 0,
+                      child: Text('Trust Sender'),
+                    )
+                  : const PopupMenuItem(
+                      value: 1,
+                      child: Text('Mark as Spam'),
+                    ),
+                ],
+              ),
         ],
       ),
       body: Column(

@@ -115,13 +115,13 @@ class _StringListPageState extends State<StringListPage> {
         title: Text(widget.title),
         actions: [
           (selected.isEmpty)
-            ? IconButton(
-                icon: const Icon(Icons.clear),
+            ? TextButton(
                 onPressed: _clearItems,
+                child: const Text('Clear'),
               )
-            : IconButton(
-                icon: const Icon(Icons.delete),
+            : TextButton(
                 onPressed: _deleteItems,
+                child: Text('Delete (x${selected.length})'),
               ),
         ],
       ),

@@ -5,8 +5,7 @@ import 'package:path_provider/path_provider.dart';
 
 //=================================================//
 
-typedef InParser<T> = T Function(String);
-typedef OutParser<T> = String Function(T);
+typedef Parser<T> = T Function(String);
 
 //=================================================//
 
@@ -14,28 +13,25 @@ typedef OutParser<T> = String Function(T);
 ///
 ///
 class Cache<T> {
+  Cache._(this._cache, this._path);
   
-  final Set<T> _cache = SplayTreeSet();
-  final OutParser<T> _outParser;
-  late String _path;
+  final Set<T> _cache;
+  final String _path;
 
   //---------------------------------------//
 
   ///
-  Cache.load(String fileName, InParser<T> inParser, this._outParser) {
+  static Future<Cache<T>> load<T>(String fileName, Parser<T> parser) async {
     try {
-      getApplicationSupportDirectory().then((dir) {
-        _path = '${dir.path}/$fileName';
-        final file = File(_path);
-        if (file.existsSync()) {
-          file.readAsLines().then(
-            (ls) => _cache.addAll(ls.map(inParser))
-          );
-        }
-      },
-      onError: (e) {
-        throw Exception(e);
-      });
+      final dir = await getApplicationSupportDirectory();
+      final path = '${dir.path}/$fileName';
+      final file = File(path);
+      final cache = SplayTreeSet<T>();
+      if (file.existsSync()) {
+        final lines = await file.readAsLines();
+        cache.addAll(lines.map(parser));
+      }
+      return Cache._(cache, path);
     }
     catch (_) {
       rethrow;
@@ -47,7 +43,7 @@ class Cache<T> {
   ///
   void _save() {
     try {
-      File(_path).writeAsString(_cache.map(_outParser).join('\n'));
+      File(_path).writeAsString(_cache.map((e) => e.toString()).join('\n'));
     }
     catch (_) {
       rethrow;
@@ -63,10 +59,21 @@ class Cache<T> {
   bool contains(T item) => _cache.contains(item);
 
   ///
-  void add(T item) {
+  int get length => _cache.length;
+
+  ///
+  T get first => _cache.first;
+
+  ///
+  T get last => _cache.first;
+
+  ///
+  bool add(T item) {
     if (_cache.add(item)) {
       _save();
+      return true;
     }
+    return false;
   }
 
   ///
@@ -95,16 +102,4 @@ class Cache<T> {
     _cache.removeAll(items);
     _save();
   }
-
-}
-
-//=================================================//
-
-///
-/// Wrapper class around to [Cache] class.
-///
-class StringCache extends Cache<String> {
-  StringCache.loadWithParsers(String fileName, InParser<String> inParser, OutParser<String> outParser) : super.load(fileName, inParser, outParser);
-
-  factory StringCache.load(String fileName) => StringCache.loadWithParsers(fileName, (s) => s, (s) => s);
 }

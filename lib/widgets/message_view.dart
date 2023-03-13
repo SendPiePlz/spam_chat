@@ -35,7 +35,7 @@ class MessageView extends ConsumerWidget {
                 .difference(date).inMinutes >= -1
       );
 
-      // NOTE: in theory, `g` should always contains at least the head
+      // NOTE: in theory, `g` should always contains at least `head`
       groups.add(g.toList(growable: false));
       i += g.length;
     }

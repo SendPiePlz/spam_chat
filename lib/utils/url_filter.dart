@@ -12,8 +12,22 @@ import 'package:spam_chat/utils/extensions.dart';
 ///
 ///
 class UrlFilter {
-  final _filter = UrlDecisionTree(UrlTransformer());
-  final _cache = StringCache.load(r'urls.txt');
+  late final UrlDecisionTree _filter;
+  late final Cache<String> _cache;
+
+  //---------------------------------------//
+
+  UrlFilter() {
+    _filter = UrlDecisionTree(UrlTransformer());
+    _initCache();
+  }
+
+  ///
+  Future<void> _initCache() async {
+    _cache = await Cache.load<String>(r'urls.txt', (s) => s);
+  }
+
+  //---------------------------------------//
   
   static final _urlPattern = RegExp(r'(https?:\/\/)?((([^/\s.]+\.)+[^/\s.]+)(\/\S*)?\b)');
   static final _escChars = RegExp(r'@|\/\/');

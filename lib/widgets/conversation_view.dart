@@ -68,6 +68,8 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
           final data = snapshot.requireData.where(widget.filter).toList(growable: false);
           return ListView.builder(
             itemCount: data.length,
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            physics: const AlwaysScrollableScrollPhysics(),
             itemBuilder: (ctx, i) {
               final textStyle = (data[i].hasUnread)
                 ? const TextStyle(fontWeight: FontWeight.bold)

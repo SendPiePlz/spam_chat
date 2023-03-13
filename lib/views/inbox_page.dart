@@ -59,7 +59,7 @@ class _InboxPageState extends State<InboxPage> with WidgetsBindingObserver {
           ),
           IconButton(
             icon: const Icon(Icons.settings),
-            onPressed: () => Navigator.push(
+            onPressed: () => Navigator.push<void>(
               context,
               MaterialPageRoute(builder: (_) => const SettingsPage()),
             ),
@@ -67,10 +67,10 @@ class _InboxPageState extends State<InboxPage> with WidgetsBindingObserver {
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => Navigator.push(
+        onPressed: () => Navigator.push<void>(
           context,
           MaterialPageRoute(builder: (_) => const NewMessagePage()),
-        ).then((_) => setState(() {})), // !?
+        ).then((_) { if (mounted) setState(() {}); }),
         child: const Icon(Icons.sms),
       ),
       body: ConversationView(

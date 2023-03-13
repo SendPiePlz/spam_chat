@@ -1,7 +1,10 @@
+import 'dart:math';
+
 import 'package:flutter/foundation.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:spam_chat/models/conversation.dart';
 import 'package:spam_chat/models/cache.dart';
+import 'package:spam_chat/models/map_cache.dart';
 import 'package:spam_chat/utils/extensions.dart';
 import 'package:spam_chat/utils/spam_filter.dart';
 import 'package:telephony/telephony.dart';
@@ -13,28 +16,47 @@ import 'package:telephony/telephony.dart';
 ///
 class TelephonyBloc {
 
-  final Telephony instance = Telephony.instance;
-  final StringCache spamCache = StringCache.load('spams.txt');
-  final StringCache hamCache = StringCache.load('hams.txt');
-  final SpamFilter _filter = SpamFilter();
+  final instance = Telephony.instance;
+  
+  late final Cache<String> spamCache;
+  late final Cache<String> hamCache;
+  late final MapCache<int> statsCache;
+  
+  final _filter = SpamFilter();
 
-  final ValueNotifier<SmsMessage?> lastestMessage = ValueNotifier(null);
+  final lastestMessage = ValueNotifier<SmsMessage?>(null);
 
   //---------------------------------------//
 
   TelephonyBloc() {
     // TODO: https://stackoverflow.com/a/13895702
-    [Permission.sms, Permission.contacts].request().then(
-      (ps) {
-        if (ps[Permission.sms] == PermissionStatus.granted) {
-          instance.listenIncomingSms(
-            onNewMessage: _foregroundMessageHandler,
-            //onBackgroundMessage: _backgroundMessageHandler,
-            listenInBackground: false,
-          );
-        }
+    
+    // Get SMS and contact permissions
+    [Permission.sms, Permission.contacts].request().then((ps) {
+      if (ps[Permission.sms] == PermissionStatus.granted) {
+        instance.listenIncomingSms(
+          onNewMessage: _foregroundMessageHandler,
+          //onBackgroundMessage: _backgroundMessageHandler,
+          listenInBackground: false,
+        );
       }
-    );
+    });
+
+    _initCaches();
+  }
+
+  Future<void> _initCaches() async {
+    spamCache = await Cache.load<String>('spams.txt', (s) => s);
+    hamCache = await Cache.load<String>('hams.txt', (s) => s);
+    statsCache = await MapCache.load<int>("stats.txt", (s) => int.parse(s));
+
+    // Init stat cache if first time
+    if (!statsCache.contains('spam')) {
+      statsCache['spam'] = spamCache.length;
+    }
+    else {
+      statsCache.update('spam', (i) => max(i, spamCache.length));
+    }
   }
 
   //---------------------------------------//
@@ -75,6 +97,7 @@ class TelephonyBloc {
     // 2. record classification
     if (spam && addr.isNotEmpty) {
       spamCache.add(addr);
+      statsCache.update('spam', (i) => i+1);
     }
 
     // 3. notify
@@ -107,6 +130,7 @@ class TelephonyBloc {
             // Newly found spam conversation
             spam = true;
             spamCache.add(first.address!);
+            statsCache.update('spam', (i) => i+1);
           }
         }
         // Insert conversation in datetime order
