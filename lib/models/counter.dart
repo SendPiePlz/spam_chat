@@ -1,3 +1,5 @@
+import 'dart:collection';
+
 //=================================================//
 
 ///
@@ -5,14 +7,14 @@
 ///
 class Counter<K> {
   Counter()
-    : _items = {}
+    : _items = HashMap.identity()
     , _filtered = false;
 
   Counter.withFilter(Iterable<K> keys)
-    : _items = Map.fromIterables(keys, List.filled(keys.length, 0))
+    : _items = HashMap.fromIterables(keys, List.filled(keys.length, 0))
     , _filtered = true;
 
-  final Map<K, int> _items;
+  final HashMap<K, int> _items;
   final bool _filtered;
 
   ///
